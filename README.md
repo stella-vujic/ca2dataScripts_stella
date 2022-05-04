@@ -3,6 +3,7 @@ The purpose of this pipeline is to perform some basic quality control and prepro
 - Raw imaging data from your experiment, in the form of .tif files and their corresponding .smr (trigger) files
 - Basic knowledge of linux commands
 - Access to a computing cluster (probably)
+
 Before proceeding with the instructions, download this repository to the location in which you are planning to run the pipeline. You can do this easily by cloning the repository onto your desired machine (see directions [here](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)).
 
 ## Setting up your software environment
@@ -28,8 +29,8 @@ You are now ready to run the Python scripts! This environment must be activated 
 conda deactivate
 ```
 
-### BIS integrated preprocessing pipeline
-Currently, the most convenient way to uses the pipeline entails the use of a Singularity container. Singularity essentially allows for the creation of a portable stack (called a "container") that contains all of the dependencies you need to run a particular piece of software. You can read more on them on this page from [Yale's Center for Research Computing](https://docs.ycrc.yale.edu/clusters-at-yale/guides/singularity/).
+### BIS integration with a Singularity container
+Currently, the most convenient way to uses the pipeline entails the use of a Singularity container. Singularity essentially allows for the creation of a portable stack (called a "container") that contains all of the dependencies you need to run a particular piece of software. You can read more about them on this page from [Yale's Center for Research Computing](https://docs.ycrc.yale.edu/clusters-at-yale/guides/singularity/).
 
 If you're not running the pipeline on a cluster that already has Singularity installed, you can install it [here](https://singularity.hpcng.org/user-docs/master/quick_start.html).
 
@@ -40,11 +41,13 @@ A singularity "image" is the collection of files needed for a container. For thi
 singularity build ubuntuBIS.sif ../biswebSing.recipe
 ```
 
-Now that your environmeent is set up, you're ready to run the pipeline.
-
 ## Running the pipeline
+Now that your environment is set up, you're ready to run the pipeline! The steps outlined in greater detail below are as follows:
+1. Correctly format your raw data files and directories
+2. Separate the two wavelengths and convert them to NIfTI files, then verify the data was split successfully
+3. Preprocess the images
 
-### Input data (tif files and smr files)
+### Formatting raw input data
 First the data should be in a BIDs like format (but not quite), for now the scripts enclosed only support the following directory structure:
 
 ```
@@ -78,10 +81,9 @@ and for electrical recording files:
 
 The scripts are overly prescritptive at the moment, but will be made more general with time. You can fill in dummy variables if needed.
 
+### Separating wavelengths and converting to NIfTI format
 
-### Splitting wavelengths
-
-Now we cam start buidling a directory containing nifti files and csvs, corresponding to the wavelength specific data and trigger timing respectively. The following commands will aid us:
+Now we can start buidling a directory containing nifti files and csvs, corresponding to the wavelength specific data and trigger timing respectively. The following commands will aid us:
 
 ```
 python smrToMat.py organizedData/
@@ -174,7 +176,8 @@ Addional notes:
 - The splitMethod and dbscanEps columns are part of a function that is under development, please ignore. 
 
 - If you run the code multiple times in order to tweak how the data is split you will need to delete the qc figures, as they do not get overwritten.
-### Preprocessing
+
+### Preprocessing the files
 
 The preprocessing code is currenty best used as a singularity container. It is available for download [here](https://drive.google.com/file/d/1H7PIvLk06wPqgDPYvIvD4HHfqPf2lkAm/view?usp=sharing) (1.7GB, md5sum = dcb254e8aa6c86bcd1f57f876b54a60e)
 
