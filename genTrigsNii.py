@@ -1254,17 +1254,18 @@ if __name__ == '__main__':
 
 
         print('Trying to automatically create triggers for : ', sesh)
-        #print(spikeMats)
-        #print(tifFiles)
+        print(len(spikeMats))
+        print(len(tifFiles))
 
+        newOrderTifs = tifFiles
         # Order the tiff files as per the ideal template
-        newOrderTifs = []
-        for temp in template:
-            tfsTemp = [tF for tF in tifFiles if all(te in tF for te in temp)]
-            if len(tfsTemp) == 1:
-                newOrderTifs.append(tfsTemp[0])
-            else:
-                newOrderTifs.append('')
+        # newOrderTifs = []
+        # for temp in template:
+        #     tfsTemp = [tF for tF in tifFiles if all(te in tF for te in temp)]
+        #     if len(tfsTemp) == 1:
+        #         newOrderTifs.append(tfsTemp[0])
+        #     else:
+        #         newOrderTifs.append('')
     
 
 
@@ -1356,7 +1357,7 @@ if __name__ == '__main__':
                 logging.exception(e)
                 connDct = {}
 
-
+        print(connDct)
         # Assuming there are matches we now try to create csvs with trigger details    
         if len(connDct.keys()) > 0: # and any(x2 in sesh for x2 in ['animal73','animal56','animal57','animal55']):
             for k in connDct.keys():
@@ -1375,6 +1376,7 @@ if __name__ == '__main__':
 
                     # If that didnt work try to do without channel 1 in smr file
                     if type(opTableOptical) != pd.core.frame.DataFrame:
+                        print("******ran Mat2 *****\n")
                         opTableOptical,opTableStim,consecTrigs,consecTrigMask = smrToTable2(k)
 
 
@@ -1506,14 +1508,14 @@ if __name__ == '__main__':
                                  trigReplaceDf = trigReplaceDf.append(tempDf)
 
                             elif firstImageName in trigReplaceDf.Img.values:
-                                processFlag = trigReplaceDf[trigReplaceDf.Img == fname.replace('.tif','')].CrossedTrigs.values
+                                processFlag = trigReplaceDf[trigReplaceDf.Img == firstImageName.replace('.tif','')].CrossedTrigs.values
                                 if len(processFlag) > 0:
                                     processFlag = processFlag[0]
                                 else:
                                     processFlag = 0
 
                                 if processFlag != 1:
-                                    row =  trigReplaceDf[trigReplaceDf.Img == fname.replace('.tif','')].index[0]
+                                    row =  trigReplaceDf[trigReplaceDf.Img == firstImageName.replace('.tif','')].index[0]
                                     trigReplaceDf.loc[row,'CrossedTrigs'] = 1
 
 
