@@ -9,7 +9,7 @@ Before proceeding with the instructions, download this repository to the locatio
 ## Setting up your software environment
 This pipeline uses Python. It is also heavily integrated with [BioImage Suite](https://bioimagesuiteweb.github.io/webapp/) (BIS), a biomedical image analysis software. To run this pipeline, we will need to set up your software environment to be compatible with running Python scripts and BIS.  
 
-### Python Environment
+### Python environment
 The easiest way to use Python on your machine is to first install miniconda. You can find and install the appropriate version for your machine [here](https://docs.conda.io/en/latest/miniconda.html). 
 
 Once miniconda is succesfully installed, we can use the "environment.yml" file to create an environment for running the pipeline. From the directory containing "environment.yml", run the command
@@ -29,7 +29,7 @@ You are now ready to run the Python scripts! This environment must be activated 
 conda deactivate
 ```
 
-### BIS integration with a Singularity container
+### Singularity container for BIS integration
 Currently, the most convenient way to uses the pipeline entails the use of a Singularity container. Singularity essentially allows for the creation of a portable stack (called a "container") that contains all of the dependencies you need to run a particular piece of software. You can read more about them on this page from [Yale's Center for Research Computing](https://docs.ycrc.yale.edu/clusters-at-yale/guides/singularity/).
 
 If you're not running the pipeline on a cluster that already has Singularity installed, you can install it [here](https://singularity.hpcng.org/user-docs/master/quick_start.html).
@@ -48,7 +48,7 @@ Now that your environment is set up, you're ready to run the pipeline! The steps
 3. Preprocess the images
 
 ### Formatting raw input data
-First the data should be in a BIDs like format (but not quite), for now the scripts enclosed only support the following directory structure:
+Currently, the preprocessing script only supports files organized into a highly specfic directory hierarchy.
 
 ```
 SLC/
