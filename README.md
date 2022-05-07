@@ -44,11 +44,11 @@ singularity build ubuntuBIS.sif ../biswebSing.recipe
 ## Running the pipeline
 Now that your environment is set up, you're ready to run the pipeline! The steps outlined in greater detail below are as follows:
 1. Correctly format your raw data files and directories
-2. Separate the two wavelengths and convert them to NIfTI files, then verify the data was split successfully
+2. Separate the two wavelengths and convert them to NIfTI files, then verify the data was split correctly
 3. Preprocess the images
 
 ### Formatting raw input data
-Currently, the preprocessing script only supports files organized into a highly specfic directory hierarchy. To format your data in this way, run the following command **in the directory where you want the organized data to reside** (any number of raw data directories can be input):
+Currently, the preprocessing script only supports files organized into a highly specfic directory hierarchy. To format your data in this way, run the following command ***in the directory where you want the organized data to reside*** (any number of raw data directories can be input):
 ```
 python formatDirs.py  /path/to/raw/animal05 /path/to/raw/animal06 --dataset <name> --sesType <name> --imgType ca2 --ratio 3
 ```
@@ -82,15 +82,16 @@ and for electrical recording (smr) files:
 ```
 The 'ID' will match the original name of the folder containing the raw data (ex. animal06). The date and time are filled in with a dummy variable at the moment due to other code dependencies.
 
-### Separating wavelengths and converting to NIfTI format
+### Separating wavelengths and converting data to NIfTI format
 
-Now we can start building a directory containing nifti files and csvs, corresponding to the wavelength specific data and trigger timing respectively. Run the following command, where organizedData/ corresponds to the home directory in which you ran formatDirs.py above:
-
+Now that the raw data is correctly organized, you can begin to preprocess the data. For each .smr file, a .csv file describing the trigger timing (or alternation of cyan and UV images)  will be generated. For each .tif file, the wavelengths will be split into two NIfTI files, corresponding to raw signal (cyan) and raw noise (UV).
+To accomplish this, run the following command:
 ```
 python genTrigsNii.py organizedData/ preprocDir/ qcFigs/ triggerFix.csv
 ```
-This command will try to split out the tif files into "signal" and "noise" automatically. If the automatic split is successful, the code will write nifti and csv data in the output directory in the following format: 
+The organizedData/ directory corresponds to the home directory in which you ran formatDirs.py above. 
 
+The preprocDir/ is where the NIfTI and .csv files will reside. Upon a successful run of the code, the data in preprocDir will be organized in the following format: 
 ```
 preprocDir/SLC
 preprocDir/SLC/ses-2
@@ -111,14 +112,13 @@ preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-0
 preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-02/rawnoise.nii.gz
 ```
 
-As well as this, there will be quality control figures present in the quality control (qcFigs) directory. You should look at each of these to ensure that the automatic split worked appropriately. Below are two examples, one correct, one incorrect, of "successfully" split data. For the incorrect example, you should use the semi automated functions detailed later.
+The qcFigs/ directory refers to where the quality control figures will be output. These figures should be evaluated to ensure that the automatic split makes sense. Below are two examples--one correct and one incorrect--of "successfully" split data. If the figure looks like the incorrect example, you should use the semi automated functions described next to correct the splitting.
 
 Correct           |  Incorrect
 :-------------------------:|:-------------------------:
 ![](figs/correct.png)  |  ![](figs/incorrect.png)
 
-If an image cannot be be split automatically, there will not be any corresponding files in the output directory. However, there are semi-automatic features that can split the image
-with your supervision. Upon first pass of the data the code will create a spreadsheet (named as you have specified), in this case "triggerFix.csv". The spreadsheet will be populated with the names of the files in your input directory automatically, and will look something like this:
+If an image cannot be be split automatically, there will not be any corresponding files in the output directory. However, there are semi-automatic features that can split the image with your supervision. Upon first pass of the data the code will create a spreadsheet (named as you have specified), in this case "triggerFix.csv". The spreadsheet will be populated with the names of the files in your input directory automatically, and will look something like this:
 
 | Img                                             |   CrossedTrigs |   autoFix |   simpFix |   sdFlag |   sdVal |   writeImgs |   manualOverwrite |   splitMethod |   dbscanEps |
 |:------------------------------------------------|---------------:|----------:|----------:|---------:|--------:|------------:|------------------:|--------------:|------------:|
