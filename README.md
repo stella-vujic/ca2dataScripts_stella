@@ -48,8 +48,11 @@ Now that your environment is set up, you're ready to run the pipeline! The steps
 3. Preprocess the images
 
 ### Formatting raw input data
-Currently, the preprocessing script only supports files organized into a highly specfic directory hierarchy.
-
+Currently, the preprocessing script only supports files organized into a highly specfic directory hierarchy. To format your data in this way, run the following command **in the directory where you want the organized data to reside** (any number of raw data directories can be input):
+```
+python formatDirs.py  /path/to/raw/animal05 /path/to/raw/animal06 --dataset <name> --sesType <name> --imgType ca2 --ratio 3
+```
+Given the folders containing the raw session data, formatDirs.py creates an organized directory hierarchy that looks something like this:
 ```
 SLC/
 SLC/ses-2
@@ -67,32 +70,26 @@ SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI3_REST_part-02.tif
 SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17-16-06-51_619.smr
 SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17-16-35-57_621.smr
 SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17-16-58-16_623.smr
-
 ```
 
-Essentially the code expects data in the following pseudo format, for Tif Files: 
+The files are all symbolic links pointing to the original location of the raw data. The --ratio flag specifies how many parts the TIF files are broken into, due to their often large file size. The default value is 3. The formating for TIF files is:
 ```
-{datasetName}/ses-{sessionLabel}/{subID}/ca2/{datasetName}_{subID}_ses-{sessionLabel}_{date}_{runNumber}_{taskLabel}_part-{partNumber}.tif
+{datasetName}/ses-{sessionType}/{ID}/ca2/{datasetName}_{ID}_ses-{sessionType}_{date}_{runNumber}_{taskLabel}_part-{partNumber}.tif
 ```
-and for electrical recording files: 
+and for electrical recording (smr) files: 
 ```
-{datasetName}/ses-{sessionLabel}/{subID}/ca2/{datasetName}_{subID}_ses-{sessionLabel}_{dateAndTime}.mat
+{datasetName}/ses-{sessionLabel}/{subID}/ca2/{datasetName}_{subID}_ses-{sessionLabel}_{dateAndTime}.smr
 ```
-
-The scripts are overly prescritptive at the moment, but will be made more general with time. You can fill in dummy variables if needed.
+The 'ID' will match the original name of the folder containing the raw data (ex. animal06). The date and time are filled in with a dummy variable at the moment due to other code dependencies.
 
 ### Separating wavelengths and converting to NIfTI format
 
-Now we can start buidling a directory containing nifti files and csvs, corresponding to the wavelength specific data and trigger timing respectively. The following commands will aid us:
+Now we can start building a directory containing nifti files and csvs, corresponding to the wavelength specific data and trigger timing respectively. Run the following command, where organizedData/ corresponds to the home directory in which you ran formatDirs.py above:
 
 ```
-python smrToMat.py organizedData/
-
 python genTrigsNii.py organizedData/ preprocDir/ qcFigs/ triggerFix.csv
-
 ```
-
-The first command will convert smr files to mat files. The will have the same names as the smr files, with a different file extension. Mat files can be read by python. The second command will try to split out the tif files into "signal" and "noise" automatically. If the automatic split is successful, the code will write nifti and csv data in the output directory in the following format: 
+This command will try to split out the tif files into "signal" and "noise" automatically. If the automatic split is successful, the code will write nifti and csv data in the output directory in the following format: 
 
 ```
 preprocDir/SLC
