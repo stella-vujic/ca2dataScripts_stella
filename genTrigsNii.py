@@ -10,20 +10,15 @@ import glob
 import pdb
 import argparse 
 import natsort
-
 import PIL
 from PIL import Image,ImageSequence
-
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-
-
 from skimage import filters
 from sklearn import cluster
 import nibabel as nb
 import matplotlib
 import logging
-
 import neo
 
 # plotting quality control figures: choose where to output them based on display settings
@@ -36,8 +31,8 @@ elif os.name == 'posix' and "DISPLAY" not in os.environ:
     from matplotlib import pyplot as plt
     import seaborn as sns
 
-### matToTable: convert raw channel data to dataframe
-### usage:
+### matToTable
+### WARNING: deprecated function, no longer need to convert smr files to mat files. see smrToTable
 def matToTable(matPath, trigSuffix = '1', cyanSuffix = '3', uvSuffix = '4', ledSuffix = '12', pawSuffix = '13'):
     
     dct=io.loadmat(matPath)  
@@ -148,8 +143,8 @@ def matToTable(matPath, trigSuffix = '1', cyanSuffix = '3', uvSuffix = '4', ledS
 
     return opTableOptical, opTableStim, consecutiveTriggers, err
 
-### matToTable2:
-### usage:
+### matToTable2
+### ### WARNING: deprecated function, no longer need to convert smr files to mat files. see smrToTable2
 def matToTable2(matPath, trigSuffix = '1', cyanSuffix = '3', uvSuffix = '4', ledSuffix = '12', pawSuffix = '13'):
     
     dct=io.loadmat(matPath)
@@ -199,14 +194,18 @@ def matToTable2(matPath, trigSuffix = '1', cyanSuffix = '3', uvSuffix = '4', led
 
     return opTableOptical,False,sumConsecTrigs,whereConsec
 
-### smrToTable:
-### usage:
+### smrToTable: convert smr channel data to pandas dataframe format
 def smrToTable(smrPath, trigName = 'Trigger', cyanName = 'LED1', uvName = 'LED2', ledStimName = 'stim_LED', pawStimName = 'stim_Paw'):
+    # read in smr file using the cedIO class and convert information to array/dataframe format
+    print('********************************************')
+    print('scanning smr file...')
+    print('********************************************')
     readSmr = neo.io.CedIO(smrPath)
     blockObj = readSmr.read(lazy=False)[0]
     data = [np.array(asig.data).squeeze() for seg in blockObj.segments for asig in seg.analogsignals]
     infoDf = pd.DataFrame(np.array([sc for sc in readSmr.header['signal_channels']]))
-
+    print('channel information for', smrPath)
+    print(infoDf)
     err=''
 
     if all([chanName in infoDf.name.values for chanName in [trigName,cyanName,uvName]]):
@@ -226,10 +225,7 @@ def smrToTable(smrPath, trigName = 'Trigger', cyanName = 'LED1', uvName = 'LED2'
             lastTrigStart=findx[-249]
 
             if (lastTrigStart - firstTrigStart)/25000 > 550:
-
-                #chan1xbin=chan1bin(findx(1):findx(end)+24749);
-                #y=downsample(chan1xbin,250);
-
+                # channel 3 is cyan data, channel 4 is the uv data
                 chan3bin=np.squeeze(data[led1Ind] > 4)
                 chan3bin=chan3bin[firstTrigStart:lastTrigStart+24999]
                 chan3bin=chan3bin*2
@@ -241,7 +237,6 @@ def smrToTable(smrPath, trigName = 'Trigger', cyanName = 'LED1', uvName = 'LED2'
                     chan4bin = chan4bin[:chan3bin.shape[0]]
                 elif chan4bin.shape[0] < chan3bin.shape[0]:
                     chan3bin = chan3bin[:chan4bin.shape[0]]
-        
 
                 combineLED=chan3bin+chan4bin
                 combineLEDDiff = np.diff(combineLED)
@@ -328,8 +323,7 @@ def smrToTable(smrPath, trigName = 'Trigger', cyanName = 'LED1', uvName = 'LED2'
 
     return opTableOptical, opTableStim, consecutiveTriggers, err
 
-### smrToTable2:
-### usage:
+### smrToTable2: alternative function that attempts to generate table from smr file without using channel 1
 def smrToTable2(smrPath, trigName = 'Trigger', cyanName = 'LED1', uvName = 'LED2', ledStimName = 'stim_LED', pawStimName = 'stim_Paw'):
    
     readSmr = neo.io.CedIO(smrPath)
@@ -372,7 +366,6 @@ def smrToTable2(smrPath, trigName = 'Trigger', cyanName = 'LED1', uvName = 'LED2
                 elif chan4bin.shape[0] < chan3bin.shape[0]:
                     chan3bin = chan3bin[:chan4bin.shape[0]]
         
-
                 combineLED=chan3bin+chan4bin
                 combineLEDDiff = np.diff(combineLED)
                 combineLEDNonzeroDiff = np.where(combineLEDDiff)[0]
@@ -410,8 +403,7 @@ def smrToTable2(smrPath, trigName = 'Trigger', cyanName = 'LED1', uvName = 'LED2
 
     return opTableOptical,False,sumConsecTrigs,whereConsec
 
-### getNframesTif:
-### usage:
+### getNframesTif: get the number of image frames in the TIF file specified by tifPath
 def getNframesTif(tifPath):
     img = Image.open(tifPath)
     
@@ -424,7 +416,7 @@ def getNframesTif(tifPath):
     return nFrames
 
 ### makeMontage:
-### usage:
+### WARNING: appears to be a deprecated function, not called anywhere in this code
 def makeMontage(imgFpath,inds,opname,trigs):
     #inds=np.squeeze(inds)
     img = Image.open(imgFpath)
@@ -516,8 +508,7 @@ def makeMontage(imgFpath,inds,opname,trigs):
     plt.savefig(opname+'TSFix.png')
     plt.close()
 
-### produceEstimateTriggers:
-### usage:
+### produceEstimateTriggers: called by autoTrigs, assign frames to a wavelength based on mean intensity
 def produceEstimateTriggers(ipTiff, histSd = 8,histSd2 = 8,saveMean=True, splitMethod = 'filter', dbscanEps = 100):
 
     opMeanPath = ipTiff.split('.')[0]+'MeanTS.npy'
@@ -534,7 +525,6 @@ def produceEstimateTriggers(ipTiff, histSd = 8,histSd2 = 8,saveMean=True, splitM
             logging.exception(e)
             return False,False,False
 
-
         movie = np.empty((imgl[0].size[1], imgl[0].size[0], len(imgl))) #np arrays have 1st index as rows
         for i in range(len(imgl)):
             movie[:,:,i] = np.array(imgl[i])
@@ -547,22 +537,6 @@ def produceEstimateTriggers(ipTiff, histSd = 8,histSd2 = 8,saveMean=True, splitM
 
     else:
         meanTS = np.load(opMeanPath)
-
-
-
-    #try:#
-
-    #    thresh = filters.threshold_minimum(meanTS)
-    #except RuntimeError as e:
-    #    print(e)
-    #    pdb.set_trace()
-    #    return False,False,False
-
-    #upperMed = np.median(meanTS[meanTS > thresh])
-    #upperStd = meanTS[meanTS > thresh].std()
-
-    #lowerMed = np.median(meanTS[meanTS < thresh])
-    #lowerStd = meanTS[meanTS < thresh].std()
 
     if splitMethod == 'filter':
         meanTsMean = meanTS.mean()
@@ -588,7 +562,7 @@ def produceEstimateTriggers(ipTiff, histSd = 8,histSd2 = 8,saveMean=True, splitM
                 return False,False,False
 
         colorAuto = meanTS.copy()
-
+        # frames above the threshold are assigned to cyan, while frames below the threshold are assigned to UV
         colorAuto[meanTS > adjustedThresh] = 1                    
         colorAuto[meanTS <= adjustedThresh] = 2
 
@@ -597,7 +571,6 @@ def produceEstimateTriggers(ipTiff, histSd = 8,histSd2 = 8,saveMean=True, splitM
 
         lowerMed = np.median(meanTS[meanTS < adjustedThresh])
         lowerStd = meanTS[meanTS < adjustedThresh].std()
-
 
         colorAuto[meanTS > (upperMed + upperStd*histSd)] = 3
 
@@ -633,8 +606,7 @@ def produceEstimateTriggers(ipTiff, histSd = 8,histSd2 = 8,saveMean=True, splitM
    
     return meanTS, colorAuto, opCsv
 
-### makeWriteOpticalCsvs:
-### usage:
+### makeWriteOpticalCsvs: generate trigger dataframes for each image
 def makeWriteOpticalCsvs(connDct,opOpticalTable,csvPaths):
     try:
         lengths = [getNframesTif(cD) for cD in sorted(connDct[k])]
@@ -648,7 +620,7 @@ def makeWriteOpticalCsvs(connDct,opOpticalTable,csvPaths):
         print('images attached to',k,'cannot be read')
 
     else:
-
+        # TODO: make this more general in case of longer scanning session that has > 3 TIF files
         for ind,imgPath in enumerate(connDct[k]):
             if ind  == 0:
                 subOpticalTable = opTableOptical.loc[:lengths[0]-1]
@@ -669,8 +641,7 @@ def makeWriteOpticalCsvs(connDct,opOpticalTable,csvPaths):
             subOpticalTable.to_csv(csvOpName)
             print('#### Wrote Optical Triggers to: ',csvOpName)
 
-### autoTrigs:
-### usage:
+### autoTrigs: split out cyan and uv wavelength and generate QC figs for verification
 def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histSd = 8, writeFiles = [1,1,1], histSd2 = 8, splitMethod = 'filter', dbscanEps = 100):
     if type(connDct) == dict:
         if (type(outputTrigs) == str) and (trigOpDir == None):
@@ -679,10 +650,9 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
         for ind,imgPath in enumerate(connDct[k]):
             if not os.path.isfile(imgPath):
                 return None
-
+            # create plot showing each wavelength and dropped triggers, if any
             opname = imgPath.split('/')[-1].split('.')[0]  
             pltOpName = os.path.join(figDir,opname+'meanTSAuto.png')
-
             if (not os.path.isfile(pltOpName)) or outputTrigs:
 
                 meanTS, colorAuto, opCsv = produceEstimateTriggers(imgPath, histSd = histSd,histSd2 = histSd2,splitMethod = splitMethod,dbscanEps = dbscanEps)
@@ -736,7 +706,7 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
 
                 else:
                     print('File already exists: ',pltOpName)
-
+                # create csv of trigger timing, if possible
                 if outputTrigs:
                     
                     csvOpName = os.path.join(trigOpDir,'OpticalOrder.csv')
@@ -755,10 +725,7 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
                             pass
                         else:
                             raise Exception('Variable "outputTrigs" must be set to "False", "simp", or "hist"')
-                    #elif os.path.isfile(csvOpName):
-                    #    print('Trigger Csv already exists: ',csvOpName)
-
-
+    # if only one image path is given
     elif type(connDct) == str:
         if (type(outputTrigs) == str) and (trigOpDir == None):
             raise Exception('If you want to output triggers please specify a directory')
@@ -787,7 +754,6 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
             else:
                 colSimp = [2 if i % 2 else 1 for i in range(0,len(meanTS)) ]
 
-
             if not os.path.isfile(pltOpName):
 
                 plt.figure(figsize = [20,10])
@@ -800,8 +766,6 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
                         col = 'y'
                     elif cA == 3:
                         col = 'r'
-
-
 
                     newTS = meanTS[colorAuto == cA]
                     xvalsSub = xvals[colorAuto == cA]
@@ -848,8 +812,8 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
     else:
         print('Input type of first argument not recognized')
 
-### mcRefFromTif:
-### usage:
+### mcRefFromTif
+### WARNING: appears to be a deprecated function, not called anywhere in this code
 def mcRefFromTif(tifPath, trigFilePath):
     img = Image.open(tifPath)
     imgl = []
@@ -875,8 +839,7 @@ def mcRefFromTif(tifPath, trigFilePath):
     
     return mcRefFrame
 
-### splitTif:
-### usage:
+### splitTif: split out the cyan and UV wavelengths; cyan is every odd frame, uv is every even frame
 def splitTif(tifPath, trigFilePath, mcRef = False):
     img = Image.open(tifPath)
     imgl = []
@@ -915,8 +878,7 @@ def splitTif(tifPath, trigFilePath, mcRef = False):
     else:
         return blueMovie,uvMovie
 
-### saveNiiLPS:
-### usage:   
+### saveNiiLPS: save NIfTI file to the desired filepath
 def saveNiiLPS(arr,opname):
     arr = arr.squeeze()
     
@@ -949,8 +911,7 @@ def saveNiiLPS(arr,opname):
     
     return opname
 
-### makeMontageCheckTrig:
-### usage:
+### makeMontageCheckTrig: create final QC figure after NIfTI files have been generated from verified split wavelengths
 def makeMontageCheckTrig(imgFpath,opname,trigs,optimeseries = False,saveMean=True):
     #inds=np.squeeze(inds)
     pltOpName = opname+'TSWithTrigs.png'
@@ -1025,8 +986,7 @@ def makeMontageCheckTrig(imgFpath,opname,trigs,optimeseries = False,saveMean=Tru
     else:
         print('File already exists: ',pltOpName)
 
-### rawPlot:
-### usage:
+### rawPlot: given original path to image, create a .npy for loading the file, create the raw plot but don't save it
 def rawPlot(imgFpath,opname,optimeseries = False,saveMean=True):
     #inds=np.squeeze(inds)
     pltOpName = opname+'TSOnly.png'
@@ -1078,8 +1038,8 @@ def rawPlot(imgFpath,opname,optimeseries = False,saveMean=True):
     else:
         print('File already exists: ',pltOpName)
 
-### relDelToSecs:
-### usage:
+### relDelToSecs: in the event that smr files can't be easily matched to their corresponding TIF files, attempt to match via timestamp
+### WARNING: not usable in current iteration of code because filenames do not include hours/mins/seconds in timestamp
 def relDelToSecs(relDelObj):
     secCount = 0
 
@@ -1109,9 +1069,9 @@ def relDelToSecs(relDelObj):
 ###     outputs some QC figures to the path specifed by the third argument. Finally, a csv file is created for the user to verify the split was successful.
 ### usage: python genTrigsNii.py rawOrganizedData/ preprocOutputDir/ qcFigs/ triggerFix.csv
 if __name__ == '__main__':
-    # ********** 
+    # ****************************************************************************************************************************
     # STEP 1: define arguments, parse command line, and assign args to variables
-    # **********
+    # ****************************************************************************************************************************
     parser=argparse.ArgumentParser(description='Run script to create trigger files and split wavelengths into seperate niftis')
     parser.add_argument('orgDir',type = str, help="Path to organized raw data directory")
     parser.add_argument('opDir',type=str,help="Path to output directory, often the preprocessing directory")
@@ -1124,9 +1084,10 @@ if __name__ == '__main__':
     args=parser.parse_args()
 
     orgDir=args.orgDir
-    print("taking raw data from", orgDir)
+    print('********************************************')
+    print('taking raw data from', orgDir)
     opDir=args.opDir
-    print("results of wavesplitting will be output to", opDir)
+    print('results of wavesplitting will be output to', opDir)
 
     # create subdirs in trigQCDir for trigger fix and trigger replace figures
     trigQcDir=args.trigQcDir
@@ -1136,7 +1097,8 @@ if __name__ == '__main__':
         os.makedirs(trigFixQcDir)
     if not os.path.isdir(trigRepQcDir):
         os.makedirs(trigRepQcDir)
-    print("quality control figures will be output to", trigQcDir)
+    print('quality control figures will be output to', trigQcDir)
+    print('********************************************')
     
     # create a string specifying the format of filepaths containing raw data from each imaging session
     # default: all paths matching .../orgDir/*/*/*/*
@@ -1144,12 +1106,12 @@ if __name__ == '__main__':
     sesGlobStr = os.path.join(orgDir,matchTemplate)
     # find and "naturally sort" all filepaths matching this template
     sesGlob = natsort.natsorted(glob.glob(sesGlobStr))
-    print("raw data files are", sesGlob)
+    print('raw data directories are', sesGlob)
     
     refImageFlag = int(args.refImage)
     refImg100Flag = int(args.refImage100)
 
-    # create .csv file if it doesn't exist and converet to a pandas dataframe
+    # create .csv file if it doesn't exist and convert to a pandas dataframe
     trigReplaceDfPath=args.trigReplaceDf
     if os.path.isfile(trigReplaceDfPath):
         print('Reading existing csv:',trigReplaceDfPath)
@@ -1167,20 +1129,19 @@ if __name__ == '__main__':
     # e.g. seven EPIs, with three parts each
     template = [['EPI'+str(eN)+'_','part-0'+str(pn)] for eN in range(1,20) for pn in range(0,4)]
 
-    # ********** 
+    # ****************************************************************************************************************************
     # STEP 2: iterate through raw data folders for each sesssion and match trigger (.smr) files to the corresponding images (.tif)
-    # **********
+    # ****************************************************************************************************************************
     for sesh in sesGlob:
         # Grab the .smr trigger files and the corresponding .tif image files in the session folder
         spikeMats = natsort.natsorted(glob.glob(sesh+'*.smr'))
         tifFiles = natsort.natsorted(glob.glob(sesh+'*.tif'))
 
-        print('Trying to automatically create triggers for : ', sesh)
-        #print(len(spikeMats))
-        #print(len(tifFiles))
+        print('********************************************')
+        print('Trying to automatically create triggers for session: ', sesh)
+        print('********************************************')
 
         newOrderTifs = tifFiles
-        # ****************************************************************
         # newOrderTifs = []
         # for temp in template:
         #     tfsTemp = [tF for tF in tifFiles if all(te in tF for te in temp)]
@@ -1192,7 +1153,6 @@ if __name__ == '__main__':
         # Delete any empty entries in newOrderTifs from the back
         # while newOrderTifs[-1] == '' and len(newOrderTifs) > 1:
         #     del newOrderTifs[-1]
-        # ****************************************************************
         
         # This dictionary will be used to match smr files to corresponding tif files; the key is the .smr file, and the values are tif files
         connDct = {}
@@ -1268,12 +1228,9 @@ if __name__ == '__main__':
                 logging.exception(e)
                 connDct = {}
 
-        #print(connDct)
-
-        # ********** 
+        # ****************************************************************************************************************************
         # STEP 3: populate csv file with trigger details
-        # TODO SV: figure out why not working for dataset
-        # **********   
+        # ****************************************************************************************************************************   
         if len(connDct.keys()) > 0:
             for k in connDct.keys():
                 # ****************************
@@ -1282,26 +1239,25 @@ if __name__ == '__main__':
                 if len(connDct[k]) == 3:
                     # confirm all files exist, then proceed
                     if os.path.isfile(k) and all([os.path.isfile(cN) for cN in connDct[k]]):
-                        print('### Splitting out data for the following files: ')
+                        print('Splitting out data for the following files: ')
                         print(k)
                         print(''.join([c+'\n' for c in connDct[k]]))
                         # Generate dataframe from smr file
-                        print("attempting to generate dataframe")
+                        print('attempting to generate dataframe from smr file, calling smrToTable')
                         opTableOptical,opTableStim,consecTrigs,err = smrToTable(k)
-                        # optablestim is returning false
                         # If unsuccessful, try to do without channel 1 in smr file
                         if type(opTableOptical) != pd.core.frame.DataFrame:
                             opTableOptical,opTableStim,consecTrigs,consecTrigMask = smrToTable2(k)
-
-                        # Write stim file if it was determined
+                        else:
+                            print('smrToTable was succesful')
+                        
+                        # Write stim file, if it was determined, to a .csv file. this will be unsuccesful if optablestim returns false
                         firstImageName = connDct[k][0].split('/')[-1]
-                        #print(firstImageName)
                         cellType, animalNum, sesh, dte, epiNum, stim, partNum = firstImageName.split('.')[0].split('_')
                         epiNum=int(epiNum.replace('EPI',''))
                         partNum = int(partNum.split('-')[-1])+1
         
                         opStimDir = os.path.join(opDir,cellType,sesh,animalNum,'ca2/',firstImageName.split('.')[0].split('_part')[0])
-                        #print('OpStimDir path is ', opStimDir)
                         opPathStim = os.path.join(opStimDir,'Stim.csv')
                         
                         if not os.path.isdir(opStimDir):
@@ -1311,20 +1267,21 @@ if __name__ == '__main__':
                             opTableStim.to_csv(opPathStim)
 
                         tifLengths = [getNframesTif(cD) for cD in sorted(connDct[k])]
-                        print(tifLengths)
-                        print(opTableOptical['opticalOrder'].shape[0])
-                        print(np.sum(tifLengths))
-                        # First pass at writing triggers
+                        print('number of frames per TIF file in this session: ', tifLengths)
+                        print('total number of frames: ', np.sum(tifLengths))
+                        print('length of trigger dataframe: ', opTableOptical['opticalOrder'].shape[0])                        
+                        
+                        # First attempt at at writing triggers to csv format
+                        # 2nd clause of if statement is commented out in order for code to run
+                        # future work TODO: diagnose why optableoptical does not return same number of rows are there are frames per scan
                         if type(opTableOptical) == pd.core.frame.DataFrame: #and opTableOptical['opticalOrder'].shape[0] == np.sum(tifLengths):
-                            print("first pass at writing trigs")
+                            print('first pass at writing trigs')
                             # If there are no consecutive triggers
                             if consecTrigs == 0 and all([os.path.isfile(cN) for cN in connDct[k]]):
-                                # Generate output names for csvs, and check if they already exist
-
                                 #opCsvNames = [os.path.isfile(cN.replace('.tif','OpticalOrder.csv')) for cN in connDct[k]]
                                 opCsvNames = []
 
-                                # Generate output csv names, and create output directory if it doesnt exist
+                                # Generate output optical order csv names, and create output directory if it doesnt exist
                                 for cN in connDct[k]:
                                     firstImageName = cN.split('/')[-1]
                                     # For some reason extract these labels again from the filename
@@ -1347,9 +1304,9 @@ if __name__ == '__main__':
                                 else:
                                     print('Trigger csvs already created for ',k)
 
-                                # ********** 
+                                # ****************************************************************************************************************************
                                 # STEP 4: if step 3 was successful, split tif file into cyan (calcium signal) and uv (noise), output as NIfTI to preproc directory
-                                # **********   
+                                # ****************************************************************************************************************************   
                                 if all([os.path.isfile(oCN) for oCN in opCsvNames]):
                                     for i,cN in enumerate(connDct[k]):
                                         
@@ -1364,18 +1321,21 @@ if __name__ == '__main__':
                                         opPathSignal = os.path.join(opDirImage,'rawsignl.nii.gz')
                                         opPathNoise = os.path.join(opDirImage,'rawnoise.nii.gz') 
 
+                                        # split TIF files into separate wavelengths and write to NiFTI
                                         if not os.path.isfile(opPathSignal) or not os.path.isfile(opPathNoise):
+                                            print('********************************************')
                                             print('Now splitting tif files')
-                                            print('##### Reading in tif and splitting: ', cN)
+                                            print('Reading in tif and splitting: ', cN)
+                                            print('********************************************')
                                             signalMovie, noiseMovie = splitTif(cN, opCsvNames[i], mcRef = False)
                                             if type(signalMovie) == bool:
                                                 print('could not split data')
 
                                             else:
-                                                print('##### Writing data to: ', opPathSignal)
+                                                print('##### Writing cyan (signal) data to: ', opPathSignal)
                                                 saveNiiLPS(signalMovie, opPathSignal)
 
-                                                print('##### Writing data to: ', opPathNoise)
+                                                print('##### Writing UV (noise) data to: ', opPathNoise)
                                                 saveNiiLPS(noiseMovie, opPathNoise)
 
                                         else:
@@ -1391,11 +1351,12 @@ if __name__ == '__main__':
                                             trigs = pd.read_csv(opCsvNames[i])['opticalOrder'].values
                                             makeMontageCheckTrig(cN,qcFigPath,trigs)
 
+                    # in the case that not all files were found
                     else:
                         # Need semi auto script for these
                         print(k,'Couldnt automatically split tif files')
                         if type(opTableOptical) != pd.core.frame.DataFrame:
-                            print('Function matToTable')
+                            print('Function smrToTable did not produce pandas dataframe')
                         if opTableOptical['opticalOrder'].shape[0] != np.sum(tifLengths):
                             print('Triggers were not the same length as the imaging data: trigger length is ',opTableOptical['opticalOrder'].shape[0],'number of optical frames is ',np.sum(tifLengths))
 
@@ -1421,22 +1382,16 @@ if __name__ == '__main__':
 
                         print('Modifying trigger csv to produce suggested fixes in trigFix directory')                            
 
-        # Lets try to take the .mat files and create one csv per tif file with the
-        # correct optical order
-
-        print('Trying semi automatic triggers')
+        # ****************************************************************************************************************************
+        # STEP 5: if data was not automatically split, the code will check the quality control CSV for manually tagged files for splitting. see README for more info
+        # ****************************************************************************************************************************
+        print('If data was not split automatically, will try semi automatic triggers for the following files based on manual evaluation of QC figures.')
 
         for imgPath in newOrderTifs:
-
             fname = imgPath.split('/')[-1]
-
             fnameNoSuff = fname.split('.')[0]
 
-            print(fnameNoSuff)
-
-
             if fnameNoSuff in trigReplaceDf.Img.values:
-
                 cellType, animalNum, sesh, dte, epiNum, stim, partNum = fname.split('.')[0].split('_')
                 epiNum=int(epiNum.replace('EPI',''))
                 partNum = int(partNum.split('-')[-1])+1
@@ -1447,7 +1402,7 @@ if __name__ == '__main__':
 
                 processFlag = trigReplaceDf[trigReplaceDf.Img == fname.replace('.tif','')].CrossedTrigs.values
 
-
+                # check if autofix or simpfix method was selected
                 if len(processFlag) > 0:
                     processFlag = processFlag[0]
                     autoFlag = trigReplaceDf[trigReplaceDf.Img == fname.replace('.tif','')].autoFix.values[0]
@@ -1461,7 +1416,7 @@ if __name__ == '__main__':
                 else:
                     processFlag = 0
 
-
+                # split TIF files according to the method specified
                 writeFiles = [0,0,0]
                 if processFlag == 1:
                     print('This image is tagged for semi auto processing: ', fname)
@@ -1476,17 +1431,13 @@ if __name__ == '__main__':
                             opname = imgPath.split('/')[-1].split('.')[0]
                             opname = os.path.join(trigFixQcDir,opname+'Before')
                             makeMontageCheckTrig(imgPath,opname,trigs.values)
-
-
                             
                     if autoFlag == 1 and ((type(splitMethod) != str) or (splitMethod == 'filter')):
                         if not os.path.isdir(opDirCsv):
                             os.makedirs(opDirCsv)
 
-
                         sdFlag = trigReplaceDf[trigReplaceDf.Img == fname.replace('.tif','')].sdFlag.values[0]
                         sdFlag2 = trigReplaceDf[trigReplaceDf.Img == fname.replace('.tif','')].sdFlag.values[0]
-
 
                         if sdFlag == 1:
                             sdVal = trigReplaceDf[trigReplaceDf.Img == fname.replace('.tif','')].sdVal.values[0]
@@ -1500,12 +1451,10 @@ if __name__ == '__main__':
                             
                         autoTrigs(imgPath,outputTrigs = 'hist', figDir = trigFixQcDir,histSd = sdVal,histSd2 = sdVal2,trigOpDir = opDirCsv)
 
-
                     elif simpFlag == 1:
                         if not os.path.isdir(opDirCsv):
                             os.makedirs(opDirCsv)
                         autoTrigs(imgPath,outputTrigs = 'simp', figDir = trigFixQcDir,writeFiles = writeFiles,trigOpDir = opDirCsv)
-
 
                     elif writeManual == 1:
                         print('Copy manually edited csv into place')
@@ -1521,8 +1470,7 @@ if __name__ == '__main__':
                         if not np.isnan(dbscanEps):
                             autoTrigs(imgPath,outputTrigs = 'hist', figDir = trigFixQcDir,trigOpDir = opDirCsv,splitMethod = 'dbscan',dbscanEps = dbscanEps)
                         else:
-                            autoTrigs(imgPath,outputTrigs = 'hist', figDir = trigFixQcDir,trigOpDir = opDirCsv,splitMethod = 'dbscan')
-                        
+                            autoTrigs(imgPath,outputTrigs = 'hist', figDir = trigFixQcDir,trigOpDir = opDirCsv,splitMethod = 'dbscan')                        
 
                     else:
                         sdFlag = trigReplaceDf[trigReplaceDf.Img == fname.replace('.tif','')].sdFlag.values[0]
@@ -1531,9 +1479,8 @@ if __name__ == '__main__':
                             autoTrigs(imgPath,outputTrigs = False, figDir = trigFixQcDir,histSd = sdVal)
                         else:
                             autoTrigs(imgPath,outputTrigs = False, figDir = trigFixQcDir)
-
         
-                    # split wavelengths
+                    # split wavelengths, same code as in automatic split case
                     if os.path.isfile(trigPath) and ((autoFlag == 1) or (simpFlag == 1) or (writeManual == 1) or (splitMethod == 'dbscan')):
                         trigs = pd.read_csv(trigPath)['opticalOrder']
                         opname = imgPath.split('/')[-1].split('.')[0]
@@ -1541,11 +1488,9 @@ if __name__ == '__main__':
                         makeMontageCheckTrig(imgPath,opname,trigs.values,optimeseries = True)
 
                         writeImgs = trigReplaceDf[trigReplaceDf.Img == fname.replace('.tif','')].writeImgs.values[0]
-
                             
                         firstImageName = imgPath.split('/')[-1]
-                        if writeImgs == 1:
-                            
+                        if writeImgs == 1:                           
                             # For some reason extract these labels again from the filename
                             cellType, animalNum, sesh, dte, epiNum, stim, partNum = firstImageName.split('.')[0].split('_')
                             epiNum=int(epiNum.replace('EPI',''))
@@ -1583,7 +1528,6 @@ if __name__ == '__main__':
                             print('##### Making QC Fig: ', qcFigPath)
                             trigs = pd.read_csv(trigPath)['opticalOrder'].values
                             makeMontageCheckTrig(imgPath,qcFigPath,trigs)
-
 
     # To Delete Preprocessing in bash:
     #for line in `cat qcFigs/preprocCheck/pvTriggerIssues.csv | tail -n +2`;do sesh=`echo $line | awk -F, '{print $1}'`; newTrigs=`echo $line | awk -F, '{print $2}'`; if [[ $newTrigs == 1 ]];then ls PreprocessedData/*/*/*/*/$sesh/*;fi;done
