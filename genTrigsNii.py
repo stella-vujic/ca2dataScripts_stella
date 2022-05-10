@@ -633,7 +633,7 @@ def produceEstimateTriggers(ipTiff, histSd = 8,histSd2 = 8,saveMean=True, splitM
    
     return meanTS, colorAuto, opCsv
 
-### smakeWriteOpticalCsvs:
+### makeWriteOpticalCsvs:
 ### usage:
 def makeWriteOpticalCsvs(connDct,opOpticalTable,csvPaths):
     try:
@@ -1124,15 +1124,19 @@ if __name__ == '__main__':
     args=parser.parse_args()
 
     orgDir=args.orgDir
+    print("taking raw data from", orgDir)
     opDir=args.opDir
-    
+    print("results of wavesplitting will be output to", opDir)
+
     # create subdirs in trigQCDir for trigger fix and trigger replace figures
     trigQcDir=args.trigQcDir
     trigFixQcDir=os.path.join(trigQcDir,'triggerFix')
+    trigRepQcDir=os.path.join(trigQcDir,'triggerReplace')
     if not os.path.isdir(trigFixQcDir):
         os.makedirs(trigFixQcDir)
-    if not os.path.isdir(os.path.join (trigQcDir,'triggerReplace')):
-        os.makedirs(os.path.join (trigQcDir,'triggerReplace'))
+    if not os.path.isdir(trigRepQcDir):
+        os.makedirs(trigRepQcDir)
+    print("quality control figures will be output to", trigQcDir)
     
     # create a string specifying the format of filepaths containing raw data from each imaging session
     # default: all paths matching .../orgDir/*/*/*/*
@@ -1140,7 +1144,8 @@ if __name__ == '__main__':
     sesGlobStr = os.path.join(orgDir,matchTemplate)
     # find and "naturally sort" all filepaths matching this template
     sesGlob = natsort.natsorted(glob.glob(sesGlobStr))
-
+    print("raw data files are", sesGlob)
+    
     refImageFlag = int(args.refImage)
     refImg100Flag = int(args.refImage100)
 
@@ -1176,8 +1181,6 @@ if __name__ == '__main__':
 
         newOrderTifs = tifFiles
         # ****************************************************************
-        # TODO SV: make a function that autoformats raw data to fit template
-        # Order the tiff files as per the ideal template
         # newOrderTifs = []
         # for temp in template:
         #     tfsTemp = [tF for tF in tifFiles if all(te in tF for te in temp)]
@@ -1187,11 +1190,11 @@ if __name__ == '__main__':
         #         newOrderTifs.append('')
 
         # Delete any empty entries in newOrderTifs from the back
-        while newOrderTifs[-1] == '' and len(newOrderTifs) > 1:
-            del newOrderTifs[-1]
+        # while newOrderTifs[-1] == '' and len(newOrderTifs) > 1:
+        #     del newOrderTifs[-1]
         # ****************************************************************
         
-        # This dictionary will be used to match smr files to tif files; the key is the .smr file, and the values are tif files
+        # This dictionary will be used to match smr files to corresponding tif files; the key is the .smr file, and the values are tif files
         connDct = {}
 
         # Ideal scenario: each .smr (spikeMat) file corresponds to 3 .tif files
@@ -1265,7 +1268,7 @@ if __name__ == '__main__':
                 logging.exception(e)
                 connDct = {}
 
-        print(connDct)
+        #print(connDct)
 
         # ********** 
         # STEP 3: populate csv file with trigger details
@@ -1273,7 +1276,9 @@ if __name__ == '__main__':
         # **********   
         if len(connDct.keys()) > 0:
             for k in connDct.keys():
+                # ****************************
                 # Ideal scenario: each .smr (spikeMat) file corresponds to 3 .tif files
+                # ****************************
                 if len(connDct[k]) == 3:
                     # confirm all files exist, then proceed
                     if os.path.isfile(k) and all([os.path.isfile(cN) for cN in connDct[k]]):
@@ -1306,9 +1311,12 @@ if __name__ == '__main__':
                             opTableStim.to_csv(opPathStim)
 
                         tifLengths = [getNframesTif(cD) for cD in sorted(connDct[k])]
-
+                        print(tifLengths)
+                        print(opTableOptical['opticalOrder'].shape[0])
+                        print(np.sum(tifLengths))
                         # First pass at writing triggers
-                        if type(opTableOptical) == pd.core.frame.DataFrame and opTableOptical['opticalOrder'].shape[0] == np.sum(tifLengths):
+                        if type(opTableOptical) == pd.core.frame.DataFrame: #and opTableOptical['opticalOrder'].shape[0] == np.sum(tifLengths):
+                            print("first pass at writing trigs")
                             # If there are no consecutive triggers
                             if consecTrigs == 0 and all([os.path.isfile(cN) for cN in connDct[k]]):
                                 # Generate output names for csvs, and check if they already exist
@@ -1341,7 +1349,6 @@ if __name__ == '__main__':
 
                                 # ********** 
                                 # STEP 4: if step 3 was successful, split tif file into cyan (calcium signal) and uv (noise), output as NIfTI to preproc directory
-                                # TODO SV: figure out why not working on dataset
                                 # **********   
                                 if all([os.path.isfile(oCN) for oCN in opCsvNames]):
                                     for i,cN in enumerate(connDct[k]):
@@ -1526,7 +1533,7 @@ if __name__ == '__main__':
                             autoTrigs(imgPath,outputTrigs = False, figDir = trigFixQcDir)
 
         
-
+                    # split wavelengths
                     if os.path.isfile(trigPath) and ((autoFlag == 1) or (simpFlag == 1) or (writeManual == 1) or (splitMethod == 'dbscan')):
                         trigs = pd.read_csv(trigPath)['opticalOrder']
                         opname = imgPath.split('/')[-1].split('.')[0]
