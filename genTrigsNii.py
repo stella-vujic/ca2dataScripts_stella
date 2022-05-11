@@ -30,169 +30,6 @@ elif os.name == 'posix' and "DISPLAY" not in os.environ:
     from matplotlib import pyplot as plt
     import seaborn as sns
 
-### matToTable
-### WARNING: deprecated function, no longer need to convert smr files to mat files. see smrToTable
-def matToTable(matPath, trigSuffix = '1', cyanSuffix = '3', uvSuffix = '4', ledSuffix = '12', pawSuffix = '13'):
-    
-    dct=io.loadmat(matPath)  
-
-    err=''
-
-    try: 
-        trigFlag = dct['head'+trigSuffix]['max'].squeeze() > 30000
-        led1Flag = dct['head'+cyanSuffix]['max'].squeeze() > 30000
-        led2Flag = dct['head'+uvSuffix]['max'].squeeze() > 30000
-    except KeyError as e:
-        logging.exception(e)
-        return False, False, 0, e
-
-    if trigFlag and led1Flag and led2Flag:
-        chan1bin=dct['chan'+trigSuffix].squeeze() > 30000;
-        findx=np.where(chan1bin)
-        findx=findx[0]
-        firstTrigStart=findx[0]
-        lastTrigStart=findx[-249]
-
-        if (lastTrigStart - firstTrigStart)/25000 > 550:
-
-            #chan1xbin=chan1bin(findx(1):findx(end)+24749);
-            #y=downsample(chan1xbin,250);
-
-            chan3bin=np.squeeze(dct['chan'+cyanSuffix] > 30000)
-            chan3bin=chan3bin[firstTrigStart:lastTrigStart+24999]
-            chan3bin=chan3bin*2
-
-            chan4bin=np.squeeze(dct['chan'+uvSuffix] > 30000)
-            chan4bin=chan4bin[firstTrigStart:lastTrigStart+24999]
-
-            if chan4bin.shape[0] > chan3bin.shape[0]:
-                chan4bin = chan4bin[:chan3bin.shape[0]]
-            elif chan4bin.shape[0] < chan3bin.shape[0]:
-                chan3bin = chan3bin[:chan4bin.shape[0]]        
-
-            combineLED=chan3bin+chan4bin
-            combineLEDDiff = np.diff(combineLED)
-            combineLEDNonzeroDiff = np.where(combineLEDDiff)[0]
-
-            compressCombineLED = combineLED[combineLEDNonzeroDiff]
-
-            nonZeroTrigs = np.where(compressCombineLED)[0]
-
-            opticalOrder = compressCombineLED[nonZeroTrigs]        
-               
-
-            consecutiveTriggers=np.sum(np.diff(opticalOrder.squeeze()) == 0) 
-
-            opTableOptical=pd.DataFrame({'opticalOrder':opticalOrder})
-        
-        else:
-            err = err+'#length of trig channel less than 550 sec#'
-            opTableOptical = False
-            consecutiveTriggers = 0
-    
-    else:
-        err = err+'#trig/led1/led2 channel empty#'
-        opTableOptical = False
-        consecutiveTriggers = 0 
-
-    try:
-        ledStimFlag = dct['head'+ledSuffix]['max'].squeeze() > 30000
-        pawStimFlag = dct['head'+pawSuffix]['max'].squeeze() > 30000
-    except KeyError as e:
-        logging.exception(e)
-        return opTableOptical, False, consecutiveTriggers, e
-
-    chan1=dct['chan'+trigSuffix].squeeze() 
-    chan1DS=signal.resample_poly(chan1,1,25000) 
-    chan1DSBin = chan1DS > 200
-
-    opTableStim=pd.DataFrame({})
-
-    if ledStimFlag and (chan1DSBin.sum() > 200):
-        #print('Max val LED stim channel: ', dct['head12']['max'])
-        chan12=dct['chan'+ledSuffix].squeeze()
-        chan12DS=signal.resample_poly(chan12,960,1000000)
-        chan12DSBin = chan12DS > 10000
-        chan12DSBin=chan12DSBin.astype(int)
-
-        chan12DSBin=chan12DSBin[:chan1DSBin.shape[0]]
-        chan12DSBin=chan12DSBin[chan1DSBin]
-        opTableStim['ledStim'] = chan12DSBin
-    else:
-        err = err+'#ledStim channel empty or fewer than 200 triggers#'
-        #print('Max val LED stim channel: ', dct['head12']['max'])
-        #print('Num trigs in downsampled channel 1: ', chan1DSBin.sum())   
-
-    if pawStimFlag and (chan1DSBin.sum() == 600):
-        chan13=dct['chan'+pawSuffix].squeeze()
-        chan13DS=signal.resample_poly(chan13,960,1000000)
-        chan13DSBin = chan13DS > 10000
-        chan13DSBin=chan13DSBin.astype(int)
-        chan13DSBin=chan13DSBin[:chan1DSBin.shape[0]]
-        chan13DSBin=chan13DSBin[chan1DSBin]
-        opTableStim['pawStim'] = chan13DSBin
-    #else:
-    #    err = err+'#pawStim channel empty or not exactly 600 triggers#'
-
-    if len(opTableStim.columns) == 0:
-        opTableStim = False   
-
-    if err == '':
-        err = '#no error#'
-
-    return opTableOptical, opTableStim, consecutiveTriggers, err
-
-### matToTable2
-### ### WARNING: deprecated function, no longer need to convert smr files to mat files. see smrToTable2
-def matToTable2(matPath, trigSuffix = '1', cyanSuffix = '3', uvSuffix = '4', ledSuffix = '12', pawSuffix = '13'):
-    
-    dct=io.loadmat(matPath)
-
-    try: 
-        #trigFlag = dct['head1']['max'].squeeze() > 30000
-        led1Flag = dct['head'+cyanSuffix]['max'].squeeze() > 30000
-        led2Flag = dct['head'+uvSuffix]['max'].squeeze() > 30000
-    except KeyError:
-        return False, False, 0,None
-
-    if led1Flag and led2Flag:
-        chan3bin=np.squeeze(dct['chan'+cyanSuffix] > 30000)
-        chan3bin=chan3bin*2
-
-        chan4bin=np.squeeze(dct['chan'+uvSuffix] > 30000)
-    
-        if chan4bin.shape[0] > chan3bin.shape[0]:
-            chan4bin = chan4bin[:chan3bin.shape[0]]
-        elif chan4bin.shape[0] < chan3bin.shape[0]:
-            chan3bin = chan3bin[:chan4bin.shape[0]]
-
-        combineLED=chan3bin+chan4bin
-        combineLEDDiff = np.diff(combineLED)
-        combineLEDNonzeroDiff = np.where(combineLEDDiff)[0]
-
-        compressCombineLED = combineLED[combineLEDNonzeroDiff]
-
-        nonZeroTrigs = np.where(compressCombineLED)[0]
-
-        opticalOrder = compressCombineLED[nonZeroTrigs]        
-
-        whereConsec = np.diff(opticalOrder.squeeze()) == 0
-        
-        sumConsecTrigs=np.sum(np.diff(opticalOrder.squeeze()) == 0) 
-        
-        whereConsec = np.insert(whereConsec,False,False,axis=0)
-
-        if len(whereConsec) != len(opticalOrder):
-            raise Exception('Consecutive trigger mask different length to trigger array')
-
-        opTableOptical=pd.DataFrame({'opticalOrder':opticalOrder})
-    else:
-        opTableOptical = False
-        sumConsecTrigs = 0
-        whereConsec = None
-
-    return opTableOptical,False,sumConsecTrigs,whereConsec
-
 ### smrToTable: convert smr channel data to pandas dataframe format
 def smrToTable(smrPath, trigName = 'Trigger', cyanName = 'LED1', uvName = 'LED2', ledStimName = 'stim_LED', pawStimName = 'stim_Paw'):
     # read in smr file using the cedIO class and convert information to array/dataframe format
@@ -414,99 +251,6 @@ def getNframesTif(tifPath):
  
     return nFrames
 
-### makeMontage:
-### WARNING: appears to be a deprecated function, not called anywhere in this code
-def makeMontage(imgFpath,inds,opname,trigs):
-    #inds=np.squeeze(inds)
-    img = Image.open(imgFpath)
-    imgl = []
-    for page in ImageSequence.Iterator(img):
-        imgl.append(page.convert(mode='F'))
-
-    if len(trigs) != len(imgl):
-        return False
-
-    movie = np.empty((imgl[0].size[1], imgl[0].size[0], len(imgl))) #np arrays have 1st index as rows
-    for i in range(len(imgl)):
-        movie[:,:,i] = np.array(imgl[i])
-
-    for j,ind in enumerate(inds):
-        plt.figure(figsize = [10,8]) 
-        for iFig in range(-3,3):
-            plt.subplot(2,3,iFig+4)
-            plt.imshow(np.squeeze(movie[:,:,ind+iFig]))
-            if ind+iFig == ind-1:  
-                plt.title('Dropped Frame '+str(ind+iFig)+' Trig Num: '+str(trigs[ind+iFig]))
-            else:
-                plt.title('Frame '+str(ind+iFig)+' Trig Num: '+str(trigs[ind+iFig]))
-        plt.tight_layout()
-        plt.savefig(opname+'Frames'+str(ind)+'.png')
-        plt.close()
-
-    plt.clf()
-    plt.figure()
-
-    movieRes = movie.reshape([512*500,-1])
-    meanTS = movieRes.mean(axis =0)
-
-    maskLabel = np.squeeze(trigs.copy()).astype('int') #np.array([2 if x % 2 else 1 for x in range(0,len(meanTS))])
-    lenTS = len(meanTS)
-    timeVector = np.linspace(1,lenTS,lenTS)
-
-    if maskLabel.shape[0] != lenTS:
-        with open(opname+'triginderr.txt','w') as f:
-            f.write('')
-        #return None
-
-        while maskLabel.shape[0] < lenTS:
-            if maskLabel[-1] == 1:
-                maskLabel = np.append(maskLabel,1)
-            else:
-                maskLabel = np.append(maskLabel,2)
-
-    fig, ax = plt.subplots()
-
-    breakDown = [[1, 'blue', 'Cyan'],[2, 'yellow', 'Ultraviolet']]
-
-    for bD in breakDown:
-        trigLabel, color, chanLabel = bD
-        #pdb.set_trace()
-        timeVectorMask = timeVector[maskLabel == trigLabel]
-        meanTSMask = meanTS[maskLabel == trigLabel]
-        ax.scatter(timeVectorMask, meanTSMask, c=color, label=chanLabel, alpha=0.3, marker = '.')
-
-    ax.legend()
-    plt.savefig(opname+'TS.png')
-    plt.close()
-
-
-    trigsNew = np.squeeze(trigs.copy()).astype('int')
-
-    for indN in inds:
-        trigsNew[indN-1] = 3
-
-    maskLabel = trigsNew
-
-    while maskLabel.shape[0] < lenTS:
-        if maskLabel[-1] == 1:
-            maskLabel = np.append(maskLabel,1)
-        else:
-            maskLabel = np.append(maskLabel,2)
-
-    fig, ax = plt.subplots()
-
-    breakDown = [[1, 'blue', 'Cyan'],[2, 'yellow', 'Ultraviolet'],[3, 'red', 'Dropped']]
-
-    for bD in breakDown:
-        trigLabel, color, chanLabel = bD
-        timeVectorMask = timeVector[maskLabel == trigLabel]
-        meanTSMask = meanTS[maskLabel == trigLabel]
-        ax.scatter(timeVectorMask, meanTSMask, c=color, label=chanLabel, alpha=0.3, marker = '.')
-
-    ax.legend()
-    plt.savefig(opname+'TSFix.png')
-    plt.close()
-
 ### produceEstimateTriggers: called by autoTrigs, assign frames to a wavelength based on mean intensity
 def produceEstimateTriggers(ipTiff, histSd = 8,histSd2 = 8,saveMean=True, splitMethod = 'filter', dbscanEps = 100):
 
@@ -707,7 +451,6 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
                     print('File already exists: ',pltOpName)
                 # create csv of trigger timing, if possible
                 if outputTrigs:
-                    
                     csvOpName = os.path.join(trigOpDir,'OpticalOrder.csv')
                     #if not os.path.isfile(csvOpName):
                     if writeFiles[ind] == 1:
@@ -732,7 +475,7 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
         imgPath = connDct
         if not os.path.isfile(imgPath):
             return None
-
+        # create autofix and simpfix figures side-by-side
         opname = imgPath.split('/')[-1].split('.')[0]  
         pltOpName = os.path.join(figDir,opname+'meanTSAuto.png')
 
@@ -770,7 +513,7 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
                     xvalsSub = xvals[colorAuto == cA]
 
                     plt.scatter(xvalsSub,newTS, marker = '.',c=col)
-                    plt.xlabel('autoFix')
+                    plt.xlabel('autoFix '+ opname)
 
                 plt.subplot(1,2,2)
                 for cS in np.unique(colSimp):
@@ -782,7 +525,7 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
                     newTS = meanTS[colSimp == cS]
                     xvalsSub = xvals[colSimp == cS]
                     plt.scatter(xvalsSub,newTS, marker = '.',c=col)
-                    plt.xlabel('simpFix')
+                    plt.xlabel('simpFix ' + opname)
 
                 plt.savefig(pltOpName)
                 plt.close()
@@ -810,33 +553,6 @@ def autoTrigs(connDct, outputTrigs = False, trigOpDir = None, figDir = '', histS
 
     else:
         print('Input type of first argument not recognized')
-
-### mcRefFromTif
-### WARNING: appears to be a deprecated function, not called anywhere in this code
-def mcRefFromTif(tifPath, trigFilePath):
-    img = Image.open(tifPath)
-    imgl = []
-    for page in ImageSequence.Iterator(img):
-        imgl.append(page.convert(mode='F'))
-
-    movie = np.empty((imgl[0].size[1], imgl[0].size[0], len(imgl))) #np arrays have 1st index as rows
-    for i in range(len(imgl)):
-        movie[:,:,i] = np.array(imgl[i])
-
-    inputTrigs=pd.read_csv(trigFilePath,index_col=0)
-    opticalOrder=inputTrigs['opticalOrder'].values
-
-    
-    blueMovie = movie[:,:,opticalOrder == 1]
-    #uvMovie = movie[:,:,opticalOrder == 2]
-
-    blueMovieSize = blueMovie.shape
-    #uvMovieSize = uvMovie.shape
-
-    midFrameBlue = round(blueMovieSize[2]/2)
-    mcRefFrame=blueMovie[:,:,midFrameBlue]
-    
-    return mcRefFrame
 
 ### splitTif: split out the cyan and UV wavelengths; cyan is every odd frame, uv is every even frame
 def splitTif(tifPath, trigFilePath, mcRef = False):
