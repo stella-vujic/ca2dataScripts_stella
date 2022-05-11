@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import nibabel as nb
 import scipy as sp
-import os
 import pdb
 import glob
 import argparse

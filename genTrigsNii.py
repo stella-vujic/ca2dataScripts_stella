@@ -18,7 +18,6 @@ from skimage import filters
 from sklearn import cluster
 import nibabel as nb
 import matplotlib
-import logging
 import neo
 
 # plotting quality control figures: choose where to output them based on display settings
