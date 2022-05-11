@@ -44,8 +44,9 @@ singularity build ubuntuBIS.sif ../biswebSing.recipe
 ## Running the pipeline
 Now that your environment is set up, you're ready to run the pipeline! The steps outlined in greater detail below are as follows:
 1. Correctly format your raw data files and directories
-2. Separate the two wavelengths and convert them to NIfTI files, then verify the data was split correctly
-3. Preprocess the images
+2. Attempt to split the wavelengths and verify the correct splitting method
+3. Separate the two wavelengths and convert them to NIfTI files
+4. Preprocess the images
 
 ### Formatting raw input data
 Currently, the preprocessing script only supports files organized into a highly specfic directory hierarchy. To format your data in this way, run the following command ***in the directory where you want the organized data to reside*** (any number of raw data directories can be input):
@@ -91,26 +92,7 @@ python genTrigsNii.py organizedData/ preprocDir/ qcFigs/ triggerFix.csv
 ```
 The organizedData/ directory corresponds to the home directory in which you ran formatDirs.py above. 
 
-The preprocDir/ is where the NIfTI and .csv files will reside. Upon a successful run of the code, the data in preprocDir will be organized in the following format: 
-```
-preprocDir/SLC
-preprocDir/SLC/ses-2
-preprocDir/SLC/ses-2/animal06
-preprocDir/SLC/ses-2/animal06/ca2
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-00
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-00/OpticalOrder.csv
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-00/rawsignl.nii.gz
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-00/rawnoise.nii.gz
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-01
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-01/OpticalOrder.csv
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-01/rawsignl.nii.gz
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-01/rawnoise.nii.gz
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-02
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-02/OpticalOrder.csv
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-02/rawsignl.nii.gz
-preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-02/rawnoise.nii.gz
-```
+The preprocDir/ is where the NIfTI and .csv files will reside. 
 
 The qcFigs/ directory refers to where the quality control figures will be output. These figures should be evaluated to ensure that the automatic split makes sense. Below are two examples--one correct and one incorrect--of "successfully" split data. If the figure looks like the incorrect example, you should use the semi automated functions described next to correct the splitting.
 
@@ -163,6 +145,27 @@ If you are happy with the autoFix solution on the left, you would input autoFix.
 |  0 | SLC_animal06_ses-2_2019-01-17_EPI1_REST_part-00 |        1       |     1     |           |          |         |     1       |                   |               |             |
 
 Once the fixes have been noted in the spreadsheet, rerun the genTrigs command. Now, the correctly split the cyan and uv wavelengths, and the nifti files will be written to the output directory.
+
+Upon a successful run of the code, the data in preprocDir will be organized in the following format: 
+```
+preprocDir/SLC
+preprocDir/SLC/ses-2
+preprocDir/SLC/ses-2/animal06
+preprocDir/SLC/ses-2/animal06/ca2
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-00
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-00/OpticalOrder.csv
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-00/rawsignl.nii.gz
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-00/rawnoise.nii.gz
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-01
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-01/OpticalOrder.csv
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-01/rawsignl.nii.gz
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-01/rawnoise.nii.gz
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-02
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-02/OpticalOrder.csv
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-02/rawsignl.nii.gz
+preprocDir/SLC/ses-2/animal06/ca2/SLC_animal06_ses-2_2019-01-17_EPI1_REST/part-02/rawnoise.nii.gz
+```
 
 #### Addional notes on splitting wavelengths:
 - Four files can be produced in the qcFigs/triggerFix directory. The will have the same name as the tif file, along with a suffix. They are:
