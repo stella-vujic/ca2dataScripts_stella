@@ -12,9 +12,9 @@ This pipeline uses Python. It is also heavily integrated with [BioImage Suite](h
 ### Python environment
 The easiest way to use Python on your machine is to first install miniconda. You can find and install the appropriate version for your machine [here](https://docs.conda.io/en/latest/miniconda.html). 
 
-Once miniconda is succesfully installed, we can use the "environment.yml" file to create an environment for running the pipeline. From the directory containing "environment.yml", run the command
+Once miniconda is succesfully installed, we can use the "environment2.yml" file to create an environment for running the pipeline. From the directory containing "environment2.yml", run the command
 ```
-conda env create -f environment.yml
+conda env create --file environment2.yml
 ```
 
 This command simply creates an environment by installing the packages listed in environment.yml. It also names the environment 'ca2Python'. 
@@ -118,7 +118,8 @@ Correct           |  Incorrect
 :-------------------------:|:-------------------------:
 ![](figs/correct.png)  |  ![](figs/incorrect.png)
 
-If an image cannot be be split automatically, there will not be any corresponding files in the output directory. However, there are semi-automatic features that can split the image with your supervision. Upon first pass of the data the code will create a spreadsheet (named as you have specified), in this case "triggerFix.csv". The spreadsheet will be populated with the names of the files in your input directory automatically, and will look something like this:
+When you first run genTrigsNii, there will not be any corresponding NIfTI files in the output directory if the image cannot be automatically split.
+If this is the case, check out the .csv file you specified in the input (called "triggerFix.csv") in this case. The spreadsheet will be populated with the names of the files in your input directory automatically, and will look something like this:
 
 | Img                                             |   CrossedTrigs |   autoFix |   simpFix |   sdFlag |   sdVal |   writeImgs |   manualOverwrite |   splitMethod |   dbscanEps |
 |:------------------------------------------------|---------------:|----------:|----------:|---------:|--------:|------------:|------------------:|--------------:|------------:|
@@ -131,7 +132,6 @@ If an image cannot be be split automatically, there will not be any correspondin
 | SLC_animal06_ses-2_2019-01-17_EPI3_REST_part-00 |                |           |           |          |         |             |                   |               |             |
 | SLC_animal06_ses-2_2019-01-17_EPI3_REST_part-01 |                |           |           |          |         |             |                   |               |             |
 | SLC_animal06_ses-2_2019-01-17_EPI3_REST_part-02 |                |           |           |          |         |             |                   |               |             |
-
 
 You can edit this spreadsheet to help fix the data. 
 - For any data that could not be split automatically the code will put a "1" in the "CrossedTrigs" column next to the filename. 
